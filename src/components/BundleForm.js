@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
+
 import { Plus, Save, X } from "lucide-react";
 import { supabase } from "../supabase";
 import { validateFormData } from "../utils";
 
-const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => {
+const BundleForm = ({
+  onDataAdded,
+  partyNames,
+  cityNames = [],
+  data,
+  user,
+}) => {
   const [formData, setFormData] = useState({
     date: "",
     lorry_type: "",
@@ -24,27 +31,83 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+  const [partyActiveIndex, setPartyActiveIndex] = useState(-1);
+  const partyInputRef = React.useRef(null);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const [filteredCitySuggestions, setFilteredCitySuggestions] = useState([]);
+  const [cityActiveIndex, setCityActiveIndex] = useState(-1);
+  const cityInputRef = React.useRef(null);
 
   const [successMessage, setSuccessMessage] = useState("");
 
   // Itemtype history (initial + localStorage)
   const initialItemtypeHistory = [
-    "Shirting", "Dress Material", "Suiting", "Scarf", "Lungi", "Petti Coat", "Dhoti", "Blouse", "Towel", "Odini", "Vest", "Lining", "Lab Coat", "Falls", "Brief", "Sun Grape", "Long Cloth", "Blouse Bit", "Mall", "Full Suit", "Chudidar", "Baba Suit", "Tops", "Jubba Set", "Frock", "Coat Suit", "Western Dresses", "Baby Bed", "Leggins", "Boys T-Shirt", "Patiyala Set", "Boys Pant", "Pavadai Satai", "Wedding R/M Set", "Nighty", "T-Shirt", "Panties", "Boys Shirt", "Night Suit", "Track Pant", "Bra", "Shots", "Slips", "Tie", "Kerchief", "Saree", "Shirt", "Bed Spread", "Pant", "Screen R/M", "Shawl"
+    "Shirting",
+    "Dress Material",
+    "Suiting",
+    "Scarf",
+    "Lungi",
+    "Petti Coat",
+    "Dhoti",
+    "Blouse",
+    "Towel",
+    "Odini",
+    "Vest",
+    "Lining",
+    "Lab Coat",
+    "Falls",
+    "Brief",
+    "Sun Grape",
+    "Long Cloth",
+    "Blouse Bit",
+    "Mall",
+    "Full Suit",
+    "Chudidar",
+    "Baba Suit",
+    "Tops",
+    "Jubba Set",
+    "Frock",
+    "Coat Suit",
+    "Western Dresses",
+    "Baby Bed",
+    "Leggins",
+    "Boys T-Shirt",
+    "Patiyala Set",
+    "Boys Pant",
+    "Pavadai Satai",
+    "Wedding R/M Set",
+    "Nighty",
+    "T-Shirt",
+    "Panties",
+    "Boys Shirt",
+    "Night Suit",
+    "Track Pant",
+    "Bra",
+    "Shots",
+    "Slips",
+    "Tie",
+    "Kerchief",
+    "Saree",
+    "Shirt",
+    "Bed Spread",
+    "Pant",
+    "Screen R/M",
+    "Shawl",
   ];
   const [itemtypeHistory, setItemtypeHistory] = useState(() => {
     const stored = localStorage.getItem("itemtypeHistory");
     if (stored) {
       try {
         const arr = JSON.parse(stored);
-        if (Array.isArray(arr)) return Array.from(new Set([...initialItemtypeHistory, ...arr]));
+        if (Array.isArray(arr))
+          return Array.from(new Set([...initialItemtypeHistory, ...arr]));
       } catch {}
     }
     return initialItemtypeHistory;
   });
   const [showItemtypeSuggestions, setShowItemtypeSuggestions] = useState(false);
-  const [filteredItemtypeSuggestions, setFilteredItemtypeSuggestions] = useState([]);
+  const [filteredItemtypeSuggestions, setFilteredItemtypeSuggestions] =
+    useState([]);
   // Itemtype suggestions
   useEffect(() => {
     if (formData.itemtype) {
@@ -106,9 +169,10 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
       );
       setFilteredSuggestions(filtered);
       setShowSuggestions(filtered.length > 0);
-      console.log("Party suggestions:", filtered); // Debug log
+      setPartyActiveIndex(-1);
     } else {
       setShowSuggestions(false);
+      setPartyActiveIndex(-1);
     }
   }, [formData.party_name, partyNames]);
 
@@ -120,10 +184,71 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
       );
       setFilteredCitySuggestions(filtered);
       setShowCitySuggestions(filtered.length > 0);
+      setCityActiveIndex(-1);
     } else {
       setShowCitySuggestions(false);
+      setCityActiveIndex(-1);
     }
   }, [formData.city, cityNames]);
+  // Keyboard navigation for party name suggestions
+  const handlePartyKeyDown = (e) => {
+    if (showSuggestions && filteredSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setPartyActiveIndex((prev) =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setPartyActiveIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredSuggestions.length - 1
+        );
+      } else if (e.key === "Enter") {
+        if (partyActiveIndex >= 0) {
+          e.preventDefault();
+          handleSuggestionClick(filteredSuggestions[partyActiveIndex]);
+        } else {
+          // Move to next field (account_type)
+          const next = document.querySelector('[name="account_type"]');
+          if (next) next.focus();
+        }
+      }
+    } else if (e.key === "Enter") {
+      // Move to next field
+      const next = document.querySelector('[name="account_type"]');
+      if (next) next.focus();
+    }
+  };
+
+  // Keyboard navigation for city suggestions
+  const handleCityKeyDown = (e) => {
+    if (showCitySuggestions && filteredCitySuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setCityActiveIndex((prev) =>
+          prev < filteredCitySuggestions.length - 1 ? prev + 1 : 0
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setCityActiveIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredCitySuggestions.length - 1
+        );
+      } else if (e.key === "Enter") {
+        if (cityActiveIndex >= 0) {
+          e.preventDefault();
+          handleCitySuggestionClick(filteredCitySuggestions[cityActiveIndex]);
+        } else {
+          // Move to next field (party_name)
+          const next = document.querySelector('[name="party_name"]');
+          if (next) next.focus();
+        }
+      }
+    } else if (e.key === "Enter") {
+      // Move to next field
+      const next = document.querySelector('[name="party_name"]');
+      if (next) next.focus();
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -159,7 +284,6 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
       setSuccessMessage(""); // Clear success message on validation error
       return;
     }
-
 
     // Add new itemtype to history if not present
     if (
@@ -334,8 +458,11 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
             </label>
             <input
               type="text"
+              name="city"
+              ref={cityInputRef}
               value={formData.city}
               onChange={(e) => handleInputChange("city", e.target.value)}
+              onKeyDown={handleCityKeyDown}
               placeholder="Enter city"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.city ? "border-red-500" : "border-gray-300"
@@ -346,8 +473,10 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
                 {filteredCitySuggestions.map((suggestion, index) => (
                   <div
                     key={index}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => handleCitySuggestionClick(suggestion)}
+                    className={`px-3 py-2 hover:bg-gray-100 cursor-pointer ${
+                      cityActiveIndex === index ? "bg-blue-100" : ""
+                    }`}
+                    onMouseDown={() => handleCitySuggestionClick(suggestion)}
                   >
                     {suggestion}
                   </div>
@@ -366,8 +495,11 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
             </label>
             <input
               type="text"
+              name="party_name"
+              ref={partyInputRef}
               value={formData.party_name}
               onChange={(e) => handleInputChange("party_name", e.target.value)}
+              onKeyDown={handlePartyKeyDown}
               placeholder="Enter party name"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.party_name ? "border-red-500" : "border-gray-300"
@@ -378,8 +510,10 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
                 {filteredSuggestions.map((suggestion, index) => (
                   <div
                     key={index}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => handleSuggestionClick(suggestion)}
+                    className={`px-3 py-2 hover:bg-gray-100 cursor-pointer ${
+                      partyActiveIndex === index ? "bg-blue-100" : ""
+                    }`}
+                    onMouseDown={() => handleSuggestionClick(suggestion)}
                   >
                     {suggestion}
                   </div>
@@ -549,9 +683,12 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
               value={formData.itemtype}
               onChange={(e) => handleInputChange("itemtype", e.target.value)}
               onFocus={() => {
-                if (formData.itemtype && filteredItemtypeSuggestions.length > 0) setShowItemtypeSuggestions(true);
+                if (formData.itemtype && filteredItemtypeSuggestions.length > 0)
+                  setShowItemtypeSuggestions(true);
               }}
-              onBlur={() => setTimeout(() => setShowItemtypeSuggestions(false), 150)}
+              onBlur={() =>
+                setTimeout(() => setShowItemtypeSuggestions(false), 150)
+              }
               placeholder="Enter item type (optional)"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.itemtype ? "border-red-500" : "border-gray-300"
@@ -564,7 +701,9 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
                   <div
                     key={idx}
                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    onMouseDown={() => handleItemtypeSuggestionClick(suggestion)}
+                    onMouseDown={() =>
+                      handleItemtypeSuggestionClick(suggestion)
+                    }
                   >
                     {suggestion}
                   </div>
