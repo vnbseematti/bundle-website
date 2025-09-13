@@ -1,0 +1,6 @@
+# Create a file named .env in your project root and add these lines:
+
+REACT_APP_SUPABASE_URL=https://your-project-id.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key-here
+
+# Replace the values with your actual Supabase credentials from the Settings > API page
