@@ -250,6 +250,34 @@ const BundleForm = ({
     }
   };
 
+  const [itemtypeActiveIndex, setItemtypeActiveIndex] = useState(-1);
+
+  // Keyboard navigation for itemtype suggestions
+  const handleItemtypeKeyDown = (e) => {
+    if (showItemtypeSuggestions && filteredItemtypeSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setItemtypeActiveIndex((prev) => prev < filteredItemtypeSuggestions.length - 1 ? prev + 1 : 0);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setItemtypeActiveIndex((prev) => prev > 0 ? prev - 1 : filteredItemtypeSuggestions.length - 1);
+      } else if (e.key === "Enter") {
+        if (itemtypeActiveIndex >= 0) {
+          e.preventDefault();
+          handleItemtypeSuggestionClick(filteredItemtypeSuggestions[itemtypeActiveIndex]);
+        } else {
+          // Move to next field (amount)
+          const next = document.querySelector('[name="amount"]');
+          if (next) next.focus();
+        }
+      }
+    } else if (e.key === "Enter") {
+      // Move to next field
+      const next = document.querySelector('[name="amount"]');
+      if (next) next.focus();
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -682,6 +710,7 @@ const BundleForm = ({
               type="text"
               value={formData.itemtype}
               onChange={(e) => handleInputChange("itemtype", e.target.value)}
+              onKeyDown={handleItemtypeKeyDown}
               onFocus={() => {
                 if (formData.itemtype && filteredItemtypeSuggestions.length > 0)
                   setShowItemtypeSuggestions(true);
@@ -700,10 +729,8 @@ const BundleForm = ({
                 {filteredItemtypeSuggestions.map((suggestion, idx) => (
                   <div
                     key={idx}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                    onMouseDown={() =>
-                      handleItemtypeSuggestionClick(suggestion)
-                    }
+                    className={`px-3 py-2 hover:bg-gray-100 cursor-pointer ${itemtypeActiveIndex === idx ? "bg-blue-100" : ""}`}
+                    onMouseDown={() => handleItemtypeSuggestionClick(suggestion)}
                   >
                     {suggestion}
                   </div>
