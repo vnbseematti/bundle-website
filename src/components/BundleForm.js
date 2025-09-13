@@ -26,7 +26,42 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
   const [filteredSuggestions, setFilteredSuggestions] = useState([]);
   const [showCitySuggestions, setShowCitySuggestions] = useState(false);
   const [filteredCitySuggestions, setFilteredCitySuggestions] = useState([]);
+
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Itemtype history (initial + localStorage)
+  const initialItemtypeHistory = [
+    "Shirting", "Dress Material", "Suiting", "Scarf", "Lungi", "Petti Coat", "Dhoti", "Blouse", "Towel", "Odini", "Vest", "Lining", "Lab Coat", "Falls", "Brief", "Sun Grape", "Long Cloth", "Blouse Bit", "Mall", "Full Suit", "Chudidar", "Baba Suit", "Tops", "Jubba Set", "Frock", "Coat Suit", "Western Dresses", "Baby Bed", "Leggins", "Boys T-Shirt", "Patiyala Set", "Boys Pant", "Pavadai Satai", "Wedding R/M Set", "Nighty", "T-Shirt", "Panties", "Boys Shirt", "Night Suit", "Track Pant", "Bra", "Shots", "Slips", "Tie", "Kerchief", "Saree", "Shirt", "Bed Spread", "Pant", "Screen R/M", "Shawl"
+  ];
+  const [itemtypeHistory, setItemtypeHistory] = useState(() => {
+    const stored = localStorage.getItem("itemtypeHistory");
+    if (stored) {
+      try {
+        const arr = JSON.parse(stored);
+        if (Array.isArray(arr)) return Array.from(new Set([...initialItemtypeHistory, ...arr]));
+      } catch {}
+    }
+    return initialItemtypeHistory;
+  });
+  const [showItemtypeSuggestions, setShowItemtypeSuggestions] = useState(false);
+  const [filteredItemtypeSuggestions, setFilteredItemtypeSuggestions] = useState([]);
+  // Itemtype suggestions
+  useEffect(() => {
+    if (formData.itemtype) {
+      const filtered = itemtypeHistory.filter((type) =>
+        type.toLowerCase().includes(formData.itemtype.toLowerCase())
+      );
+      setFilteredItemtypeSuggestions(filtered);
+      setShowItemtypeSuggestions(filtered.length > 0);
+    } else {
+      setShowItemtypeSuggestions(false);
+    }
+  }, [formData.itemtype, itemtypeHistory]);
+
+  const handleItemtypeSuggestionClick = (suggestion) => {
+    setFormData((prev) => ({ ...prev, itemtype: suggestion }));
+    setShowItemtypeSuggestions(false);
+  };
 
   // Lorry type options
   const lorryTypes = [
@@ -123,6 +158,19 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
       setErrors(validationErrors);
       setSuccessMessage(""); // Clear success message on validation error
       return;
+    }
+
+
+    // Add new itemtype to history if not present
+    if (
+      formData.itemtype &&
+      !itemtypeHistory.some(
+        (type) => type.toLowerCase() === formData.itemtype.toLowerCase()
+      )
+    ) {
+      const updated = [formData.itemtype, ...itemtypeHistory];
+      setItemtypeHistory(updated);
+      localStorage.setItem("itemtypeHistory", JSON.stringify(updated));
     }
 
     setIsSubmitting(true);
@@ -491,8 +539,8 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
             )}
           </div>
 
-          {/* Itemtype */}
-          <div>
+          {/* Itemtype with autocomplete/history */}
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Itemtype
             </label>
@@ -500,11 +548,29 @@ const BundleForm = ({ onDataAdded, partyNames, cityNames = [], data, user }) => 
               type="text"
               value={formData.itemtype}
               onChange={(e) => handleInputChange("itemtype", e.target.value)}
+              onFocus={() => {
+                if (formData.itemtype && filteredItemtypeSuggestions.length > 0) setShowItemtypeSuggestions(true);
+              }}
+              onBlur={() => setTimeout(() => setShowItemtypeSuggestions(false), 150)}
               placeholder="Enter item type (optional)"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.itemtype ? "border-red-500" : "border-gray-300"
               }`}
+              autoComplete="off"
             />
+            {showItemtypeSuggestions && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                {filteredItemtypeSuggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    onMouseDown={() => handleItemtypeSuggestionClick(suggestion)}
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
             {errors.itemtype && (
               <p className="text-red-500 text-sm mt-1">{errors.itemtype}</p>
             )}
